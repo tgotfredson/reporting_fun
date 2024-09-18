@@ -8,14 +8,15 @@
     <style>
         body {
             font-family: Arial, sans-serif;
-            background-color: #007BFF; /* Blue background */
+            background-color: #87CEFA; /* Light blue background */
             color: white;
             text-align: center;
             padding: 20px;
         }
 
         h1 {
-            font-size: 2rem;
+            font-size: 2.5rem;
+            margin-bottom: 20px;
         }
 
         .container {
@@ -24,12 +25,27 @@
         }
 
         button {
-            padding: 10px 20px;
+            padding: 15px 30px;
             background-color: #28a745;
             color: white;
             border: none;
+            border-radius: 20px;
             cursor: pointer;
             margin-top: 20px;
+            font-size: 1.2rem;
+            box-shadow: 2px 2px 5px rgba(0, 0, 0, 0.3); /* 3D effect */
+            transition: background-color 0.3s, box-shadow 0.3s;
+        }
+
+        button:hover {
+            background-color: #218838;
+            box-shadow: 2px 2px 10px rgba(0, 0, 0, 0.5);
+        }
+
+        .button-container {
+            display: flex;
+            flex-direction: column;
+            gap: 10px; /* Stacked buttons */
         }
 
         table {
@@ -48,6 +64,8 @@
         input[type="file"] {
             padding: 10px;
             margin: 20px 0;
+            border-radius: 5px;
+            font-size: 1.2rem;
         }
 
     </style>
@@ -59,10 +77,12 @@
         <!-- CSV Upload -->
         <input type="file" id="csvFileInput" accept=".csv">
         
-        <!-- Pages Navigation -->
-        <button onclick="generateReport()">Generate Monthly Report</button>
-        <button onclick="showDashboard()">Show Individual Dashboard</button>
-        <button onclick="splitGroups()">Generate Pass/Fail Report</button>
+        <!-- Pages Navigation: Stacked buttons -->
+        <div class="button-container">
+            <button onclick="generateReport()">Generate Monthly Report</button>
+            <button onclick="showDashboard()">Show Individual Dashboard</button>
+            <button onclick="splitGroups()">Generate Pass/Fail Report</button>
+        </div>
         
         <!-- Report Display -->
         <div id="output"></div>
@@ -130,16 +150,15 @@
                 return;
             }
 
-            const id = prompt("Enter the ID number:");
-            const personData = attendanceData.filter(row => row.ID === parseInt(id));
+            const name = prompt("Enter the Name:");
+            const personData = attendanceData.filter(row => row.Name.toLowerCase() === name.toLowerCase());
             if (personData.length === 0) {
-                alert('No data found for the entered ID.');
+                alert('No data found for the entered Name.');
                 return;
             }
 
             // Generate the dashboard
-            let html = `<h2>Dashboard for ID: ${id}</h2>`;
-            html += `<p>Name: ${personData[0].Name}</p>`;
+            let html = `<h2>Dashboard for Name: ${name}</h2>`;
             html += `<p>Total Visits: ${personData.length}</p>`;
 
             // Show the visits per day in the selected range
@@ -166,41 +185,40 @@
 
             // Count the visits per person per month
             attendanceData.forEach(row => {
-                const id = row.ID;
                 const name = row.Name;
                 const date = new Date(row.Date);
                 const month = date.toLocaleString('default', { month: 'long', year: 'numeric' });
 
-                if (!visitCount[id]) {
-                    visitCount[id] = { Name: name, visits: {} };
+                if (!visitCount[name]) {
+                    visitCount[name] = { Name: name, visits: {} };
                 }
 
-                if (!visitCount[id].visits[month]) {
-                    visitCount[id].visits[month] = 0;
+                if (!visitCount[name].visits[month]) {
+                    visitCount[name].visits[month] = 0;
                 }
 
-                visitCount[id].visits[month]++;
+                visitCount[name].visits[month]++;
             });
 
             // Classify into pass/fail based on visits
-            for (const id in visitCount) {
+            for (const name in visitCount) {
                 let pass = true;
-                for (const month in visitCount[id].visits) {
-                    if (visitCount[id].visits[month] < 10) {
+                for (const month in visitCount[name].visits) {
+                    if (visitCount[name].visits[month] < 10) {
                         pass = false;
                         break;
                     }
                 }
                 if (pass) {
-                    passGroup.push(visitCount[id]);
+                    passGroup.push(visitCount[name]);
                 } else {
-                    failGroup.push(visitCount[id]);
+                    failGroup.push(visitCount[name]);
                 }
             }
 
             // Create CSV content
-            const passCsv = "ID,Name,Month,Visits\n" + passGroup.map(p => `${p.ID},${p.Name}`).join("\n");
-            const failCsv = "ID,Name,Month,Visits\n" + failGroup.map(f => `${f.ID},${f.Name}`).join("\n");
+            const passCsv = "Name,Month,Visits\n" + passGroup.map(p => `${p.Name}`).join("\n");
+            const failCsv = "Name,Month,Visits\n" + failGroup.map(f => `${f.Name}`).join("\n");
 
             // Download the CSV files
             downloadCSV(passCsv, 'pass_group.csv');
