@@ -268,4 +268,24 @@
             }
 
             // Create CSV content
-            const passCsv = "Name,Month
+            const passCsv = "Name,Month,Visits\n" + passGroup.map(p => `${p.Name}`).join("\n");
+            const failCsv = "Name,Month,Visits\n" + failGroup.map(f => `${f.Name}`).join("\n");
+
+            // Download the CSV files
+            downloadCSV(passCsv, 'pass_group.csv');
+            downloadCSV(failCsv, 'fail_group.csv');
+        }
+
+        // Helper function to download CSV
+        function downloadCSV(csv, filename) {
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = filename;
+            link.click();
+        }
+
+    </script>
+
+</body>
+</html>
