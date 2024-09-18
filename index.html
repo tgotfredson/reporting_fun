@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CSV Attendance Report</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.0/papaparse.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #007BFF; /* Blue background */
+            color: white;
+            text-align: center;
+            padding: 20px;
+        }
+
+        h1 {
+            font-size: 2rem;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        button {
+            padding: 10px 20px;
+            background-color: #28a745;
+            color: white;
+            border: none;
+            cursor: pointer;
+            margin-top: 20px;
+        }
+
+        table {
+            margin: 20px auto;
+            background: #fff;
+            color: #000;
+            border-collapse: collapse;
+            width: 100%;
+        }
+
+        th, td {
+            padding: 10px;
+            border: 1px solid #000;
+        }
+
+        input[type="file"] {
+            padding: 10px;
+            margin: 20px 0;
+        }
+
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Attendance Report System</h1>
+
+        <!-- CSV Upload -->
+        <input type="file" id="csvFileInput" accept=".csv">
+        
+        <!-- Pages Navigation -->
+        <button onclick="generateReport()">Generate Monthly Report</button>
+        <button onclick="showDashboard()">Show Individual Dashboard</button>
+        <button onclick="splitGroups()">Generate Pass/Fail Report</button>
+        
+        <!-- Report Display -->
+        <div id="output"></div>
+    </div>
+
+    <script>
+        let attendanceData = [];  // Global array to store CSV data
+
+        // Function to parse CSV using PapaParse
+        document.getElementById('csvFileInput').addEventListener('change', function(event) {
+            const file = event.target.files[0];
+            if (file) {
+                Papa.parse(file, {
+                    header: true,
+                    dynamicTyping: true,
+                    complete: function(results) {
+                        attendanceData = results.data;
+                        console.log("CSV data:", attendanceData);
+                        alert('CSV file loaded successfully!');
+                    }
+                });
+            }
+        });
+
+        // Function to generate monthly report
+        function generateReport() {
+            if (attendanceData.length === 0) {
+                alert('Please upload a CSV file first.');
+                return;
+            }
+
+            const report = {};  // Will store visits by name and month
+            attendanceData.forEach(row => {
+                const name = row.Name;
+                const date = new Date(row.Date);
+                const month = date.toLocaleString('default', { month: 'long', year: 'numeric' });
+
+                if (!report[name]) {
+                    report[name] = {};
+                }
+
+                if (!report[name][month]) {
+                    report[name][month] = 0;
+                }
+
+                report[name][month]++;
+            });
+
+            // Generate the HTML table for the report
+            let html = '<h2>Monthly Attendance Report</h2>';
+            html += '<table><tr><th>Name</th><th>Month</th><th>Visits</th></tr>';
+            for (const name in report) {
+                for (const month in report[name]) {
+                    html += `<tr><td>${name}</td><td>${month}</td><td>${report[name][month]}</td></tr>`;
+                }
+            }
+            html += '</table>';
+            document.getElementById('output').innerHTML = html;
+        }
+
+        // Function to show individual dashboard
+        function showDashboard() {
+            if (attendanceData.length === 0) {
+                alert('Please upload a CSV file first.');
+                return;
+            }
+
+            const id = prompt("Enter the ID number:");
+            const personData = attendanceData.filter(row => row.ID === parseInt(id));
+            if (personData.length === 0) {
+                alert('No data found for the entered ID.');
+                return;
+            }
+
+            // Generate the dashboard
+            let html = `<h2>Dashboard for ID: ${id}</h2>`;
+            html += `<p>Name: ${personData[0].Name}</p>`;
+            html += `<p>Total Visits: ${personData.length}</p>`;
+
+            // Show the visits per day in the selected range
+            html += '<h3>Visits by Date:</h3><ul>';
+            personData.forEach(row => {
+                html += `<li>${new Date(row.Date).toLocaleDateString()}</li>`;
+            });
+            html += '</ul>';
+
+            document.getElementById('output').innerHTML = html;
+        }
+
+        // Function to split into Pass/Fail groups and download as CSV
+        function splitGroups() {
+            if (attendanceData.length === 0) {
+                alert('Please upload a CSV file first.');
+                return;
+            }
+
+            const passGroup = [];
+            const failGroup = [];
+
+            const visitCount = {};
+
+            // Count the visits per person per month
+            attendanceData.forEach(row => {
+                const id = row.ID;
+                const name = row.Name;
+                const date = new Date(row.Date);
+                const month = date.toLocaleString('default', { month: 'long', year: 'numeric' });
+
+                if (!visitCount[id]) {
+                    visitCount[id] = { Name: name, visits: {} };
+                }
+
+                if (!visitCount[id].visits[month]) {
+                    visitCount[id].visits[month] = 0;
+                }
+
+                visitCount[id].visits[month]++;
+            });
+
+            // Classify into pass/fail based on visits
+            for (const id in visitCount) {
+                let pass = true;
+                for (const month in visitCount[id].visits) {
+                    if (visitCount[id].visits[month] < 10) {
+                        pass = false;
+                        break;
+                    }
+                }
+                if (pass) {
+                    passGroup.push(visitCount[id]);
+                } else {
+                    failGroup.push(visitCount[id]);
+                }
+            }
+
+            // Create CSV content
+            const passCsv = "ID,Name,Month,Visits\n" + passGroup.map(p => `${p.ID},${p.Name}`).join("\n");
+            const failCsv = "ID,Name,Month,Visits\n" + failGroup.map(f => `${f.ID},${f.Name}`).join("\n");
+
+            // Download the CSV files
+            downloadCSV(passCsv, 'pass_group.csv');
+            downloadCSV(failCsv, 'fail_group.csv');
+        }
+
+        // Helper function to download CSV
+        function downloadCSV(csv, filename) {
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = filename;
+            link.click();
+        }
+
+    </script>
+
+</body>
+</html>
