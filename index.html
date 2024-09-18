@@ -68,6 +68,25 @@
             font-size: 1.2rem;
         }
 
+        /* New dashboard styles */
+        .dashboard {
+            margin-top: 20px;
+            font-size: 1.5rem;
+        }
+
+        .dashboard .big-visit {
+            font-size: 3rem;
+            font-weight: bold;
+        }
+
+        .dashboard .green {
+            color: #28a745; /* Green */
+        }
+
+        .dashboard .red {
+            color: #dc3545; /* Red */
+        }
+
     </style>
 </head>
 <body>
@@ -173,9 +192,25 @@
                 return;
             }
 
+            // Calculate total visits and "days short"
+            const totalVisits = personData.length;
+            const daysShort = Math.max(0, 10 - totalVisits);
+
+            // Calculate the average visits of all users
+            const totalUsers = new Set(attendanceData.map(row => row.Name)).size;
+            const totalVisitsAll = attendanceData.length;
+            const averageVisits = (totalVisitsAll / totalUsers).toFixed(2); // Round to 2 decimals
+
+            // Determine visit color (green for 3+ visits, red for 2 or fewer)
+            const visitClass = totalVisits >= 3 ? 'green' : 'red';
+
             // Generate the dashboard
             let html = `<h2>Dashboard for Name: ${name}</h2>`;
-            html += `<p>Total Visits: ${personData.length}</p>`;
+            html += `<div class="dashboard">`;
+            html += `<p>Total Visits: <span class="big-visit ${visitClass}">${totalVisits}</span></p>`;
+            html += `<p>Days Short of Goal (10): ${daysShort}</p>`;
+            html += `<p>Compared to Average (Peers): ${totalVisits} vs Average ${averageVisits}</p>`;
+            html += '</div>';
 
             // Show the visits per day in the selected range
             html += '<h3>Visits by Date:</h3><ul>';
@@ -233,24 +268,4 @@
             }
 
             // Create CSV content
-            const passCsv = "Name,Month,Visits\n" + passGroup.map(p => `${p.Name}`).join("\n");
-            const failCsv = "Name,Month,Visits\n" + failGroup.map(f => `${f.Name}`).join("\n");
-
-            // Download the CSV files
-            downloadCSV(passCsv, 'pass_group.csv');
-            downloadCSV(failCsv, 'fail_group.csv');
-        }
-
-        // Helper function to download CSV
-        function downloadCSV(csv, filename) {
-            const blob = new Blob([csv], { type: 'text/csv' });
-            const link = document.createElement('a');
-            link.href = URL.createObjectURL(blob);
-            link.download = filename;
-            link.click();
-        }
-
-    </script>
-
-</body>
-</html>
+            const passCsv = "Name,Month
