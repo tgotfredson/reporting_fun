@@ -99,13 +99,29 @@
                     header: true,
                     dynamicTyping: true,
                     complete: function(results) {
-                        attendanceData = results.data;
+                        attendanceData = removeDuplicates(results.data);
                         console.log("CSV data:", attendanceData);
                         alert('CSV file loaded successfully!');
                     }
                 });
             }
         });
+
+        // Function to remove duplicate visits on the same day for the same person
+        function removeDuplicates(data) {
+            const uniqueData = [];
+            const seen = new Set();
+
+            data.forEach(row => {
+                const key = `${row.Name}-${new Date(row.Date).toLocaleDateString()}`;
+                if (!seen.has(key)) {
+                    seen.add(key);
+                    uniqueData.push(row);
+                }
+            });
+
+            return uniqueData;
+        }
 
         // Function to generate monthly report
         function generateReport() {
